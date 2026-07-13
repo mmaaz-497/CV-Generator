@@ -27,19 +27,42 @@ export async function generateCvPdf(a4El: HTMLElement, filename: string): Promis
     import("jspdf"),
   ]);
 
+  // The offscreen positioning MUST live on a wrapper, never on the capture root:
+  // html-to-image copies the root's computed style into the <foreignObject> it
+  // rasterises, so a `position:fixed; left:-10000px` root would be laid out right
+  // back off the SVG viewport and the canvas would come out blank.
+  const holder = document.createElement("div");
+  holder.style.cssText =
+    `position:fixed;left:-10000px;top:0;width:${A4_W_PX}px;margin:0;background:#ffffff;`;
+
   const clone = a4El.cloneNode(true) as HTMLElement;
   clone.style.transform = "none";
-  clone.style.position = "fixed";
-  clone.style.left = "-10000px";
-  clone.style.top = "0";
   clone.style.margin = "0";
-  document.body.appendChild(clone);
+
+  // Inserting the clone re-triggers the template's `.tpl-fade` entry animation, and
+  // html-to-image bakes each node's CURRENT computed style into the SVG — capturing a
+  // half-faded CV (~35% opacity, colours washed out). Freeze animations so we always
+  // capture the settled end state, exactly as `@media print` already does for `.tpl-fade`.
+  clone.style.animation = "none";
+  for (const el of clone.querySelectorAll<HTMLElement>("*")) {
+    el.style.animation = "none";
+    el.style.transition = "none";
+  }
+
+  holder.appendChild(clone);
+  document.body.appendChild(holder);
 
   try {
     // Let layout settle before measuring/rasterising.
     await new Promise((r) => requestAnimationFrame(() => r(null)));
 
-    const full = await toCanvas(clone, { pixelRatio: SCALE, backgroundColor: "#ffffff" });
+    const full = await toCanvas(clone, {
+      pixelRatio: SCALE,
+      backgroundColor: "#ffffff",
+      // Applied after the computed-style copy above — keeps the capture root at the
+      // foreignObject origin, at natural A4, whatever styles it inherits.
+      style: { transform: "none", position: "static", left: "auto", top: "auto", margin: "0" },
+    });
     const pages = computePages(clone);
 
     const doc = new jsPDF({ unit: "mm", format: "a4" });
@@ -63,6 +86,6 @@ export async function generateCvPdf(a4El: HTMLElement, filename: string): Promis
 
     doc.save(filename);
   } finally {
-    clone.remove();
+    holder.remove();
   }
 }
