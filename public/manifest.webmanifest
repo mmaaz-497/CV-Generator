@@ -1,0 +1,26 @@
+{
+  "name": "CV Maker — Resume Builder",
+  "short_name": "CV Maker",
+  "description": "Build a professional CV on your phone and export a print-ready A4 PDF. Works entirely on your device — no data is uploaded.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f4f5",
+  "theme_color": "#003c94",
+  "categories": ["productivity", "business"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

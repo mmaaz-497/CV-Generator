@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+}
+
+:root {
+  /* CV style defaults; each template root overrides these inline from cv.style */
+  --accent: #1e3a5f;
+  --fs-base: 10.5pt;
+}
+
+body {
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* ---------- Print foundation (constitution III: print is first-class) ---------- */
+
+@page {
+  size: A4;
+  margin: 0;
+}
+
+@media print {
+  /* Everything that is app chrome, not CV, must vanish (FR-022) */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Accent bands / dark sidebars must actually print their colors */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  html,
+  body {
+    background: #ffffff;
+  }
+}
+
+/* A single CV entry (one job, one degree, …) must never split across a page break
+   (FR-023, SC-006). Applied by every template to each entry block. */
+.cv-entry {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* ---------- Preview surface ---------- */
+/* The A4 page frame. On screen it is scaled-to-fit via an inline transform; in
+   print the transform is removed so the page renders at true A4. */
+.a4 {
+  width: 210mm;
+  background: #ffffff;
+}
+
+@media screen {
+  .a4 {
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.18);
+  }
+}
+
+/* Subtle fade when the template changes in preview (FR-028). Keyed remount plays
+   it on each switch; accent/font changes are instant CSS-var updates (no remount). */
+@keyframes tplFade {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.tpl-fade {
+  animation: tplFade 180ms ease-out;
+}
+@media print {
+  .tpl-fade {
+    animation: none !important;
+  }
+}
+
+@media print {
+  .preview-surface {
+    background: #ffffff !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  .a4-scaler {
+    height: auto !important;
+  }
+  .a4 {
+    transform: none !important;
+    box-shadow: none !important;
+    width: 210mm !important;
+  }
+}

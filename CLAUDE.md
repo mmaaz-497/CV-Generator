@@ -1,8 +1,96 @@
-# Claude Code Rules
+﻿# Claude Code Rules
 
 This file is generated during init for the selected agent.
 
 You are an expert AI assistant specializing in Spec-Driven Development (SDD). Your primary goal is to work with the architext to build products.
+
+<!-- ============================================================= -->
+<!-- PROJECT CONTEXT (this codebase) — read first in a new session  -->
+<!-- ============================================================= -->
+
+# Project: CV Generator
+
+A mobile-first, **100% client-side** web app for a print/composing shop. A non-technical
+shopkeeper uses it on a phone to build a customer's CV from a template gallery and export an
+A4 PDF (to print or share on WhatsApp). Governed by `.specify/memory/constitution.md`
+(**v1.1.0** — read it; the six principles are hard constraints, not suggestions).
+
+## Non-negotiable constraints (constitution)
+
+- **Mobile-first (I):** every screen works at **360px**; touch targets **≥44px**; no horizontal scroll.
+- **Zero backend / zero persistence (II):** all state in React memory only. **No** localStorage/
+  sessionStorage/cookies/IndexedDB for customer data, **no** API routes/server actions, **no**
+  outbound request carrying customer data. Page refresh = fresh start. This is absolute.
+- **Print-perfect A4 (III):** `@media print` is first-class; output is A4 with no cut-off content,
+  no split entries, no app chrome.
+- **Speed (IV):** name + phone are the only required fields; empty sections never render.
+- **Simplicity (V) / Fixed stack (VI):** Next.js + TypeScript + Tailwind, client components only,
+  static export on Vercel free tier. Adding a runtime dependency is a **constitutional amendment**.
+  The **only** exception (v1.1.0, ADR-0003): narrowly-scoped, **dynamically-imported** client-side
+  libs for **on-device** document export — still nothing transmitted.
+
+## Tech stack & layout
+
+- Next.js 16 (App Router, `output: 'export'`), React 19, TypeScript 5, Tailwind v4. Single route `/`.
+- **State:** one `CVDocument` via `useReducer` + Context (`src/lib/cv-context.tsx`: `CVProvider`/
+  `useCV`). Pure reducer (`src/lib/cv-reducer.ts`) — never throws, unknown ids = silent no-op.
+  In-memory `screen` enum drives navigation: `gallery | form | preview` (no URL routing).
+- **Emptiness authority:** `src/lib/empty-checks.ts` (`isEntryEmpty`/`isSectionEmpty`/`hasAnyData`) —
+  the single source of truth for "empty sections never render" and the `beforeunload` guard.
+- **Templates:** `src/templates/` — 5 components (Classic/Professional/Modern/Elegant/Minimal) sharing
+  `TemplateProps`; registry in `src/templates/registry.ts` (NOT in constants — avoids a circular
+  import). Shared pieces + `SectionBody`/`SidebarMeta`/`regions.ts` (sidebar page-1-only paginator).
+  Accent/font via CSS vars `--accent`/`--fs-base`; Classic is B&W (`usesAccent:false`).
+- **Screens:** `src/screens/` (Gallery/Form/Preview). Form editors are memoized on their state slice
+  and receive slice+`dispatch` as props (perf — FormScreen is the sole context consumer).
+- **Print CSS:** `src/app/globals.css` — `@page{size:A4;margin:0}`, `.no-print`, `.cv-entry{break-inside:avoid}`,
+  `.a4{width:210mm}` (preview scales it with a transform that print resets).
+- **Photo:** `src/lib/photo.ts` — canvas downscale ≤600px → JPEG data URL; never transmitted.
+- **PDF download (feature 002):** `src/lib/pdf/` — `filename.ts` (`pdfFilename`, pure), `paginate.ts`
+  (`computePages` — print-matching page bands), `generate.ts` (`generateCvPdf` — **dynamic-imports**
+  `html-to-image`+`jspdf`, renders an **offscreen clone at natural A4** so the scaled preview isn't
+  shrunk, assembles A4 pages, `doc.save()`).
+
+## Status
+
+- **Feature 001 (`specs/001-cv-generator/`)**: COMPLETE — all 48 tasks; residual human-only checks are
+  T044 (real-Android print) and T046 (subjective feel).
+- **Feature 002 (`specs/002-pdf-download/`)**: IN PROGRESS on branch `002-pdf-download`. Done: Phase 1–2
+  (deps, `pdfFilename`+tests, the validated fidelity/page-break spike, `paginate.ts`+`generate.ts`) and
+  US1 (one-tap `DownloadPdfButton`, T010 MVP proven). **Remaining: US2** (T011–T013: rename
+  `PdfButton`→`PrintButton`, `ExportBar` with Download + Print), **US3** (T014–T016: spinner + double-tap
+  guard + inline error→Print fallback), **Phase 6** (T017–T020: 360px, privacy+bundle, fidelity matrix,
+  final gate). See `specs/002-pdf-download/tasks.md`.
+
+## Build / test / verify
+
+```bash
+npm run build     # static export → ./out (also runs TypeScript typecheck)
+npm test          # Vitest — pure logic only (reducer, empty-checks, pdfFilename): 34 tests
+```
+
+- **Testing policy is minimal by design:** Vitest for pure logic ONLY (`src/lib/**/*.test.ts`).
+  Everything visual/behavioural (360px, print fidelity, PDF output, privacy) is verified **empirically**
+  with **headless Chrome (puppeteer-core) + pdfjs** harnesses written to the session scratchpad and run
+  against the real `out/` build. This is the expected way to prove UI/print/PDF work — reasoning alone
+  is insufficient for print/raster correctness.
+
+## Environment gotchas (Windows / this repo)
+
+- `.specify/scripts/powershell/create-new-feature.ps1` **fails on PS 5.1** (positional-arg/Join-Path),
+  but usually still creates the branch + spec dir — finish agent-natively. `create-adr.sh`/`create-phr.sh`
+  are **absent** → author ADRs/PHRs agent-natively from the templates. `update-agent-context.ps1` works.
+- **`color-mix()`** is used by 4/5 templates → any DOM→image tool MUST use the browser's own renderer
+  (`html-to-image`, NOT `html2canvas`, which can't do `color-mix`).
+- The preview `.a4` has an on-screen `transform: scale(...)`; capture from an **offscreen clone** (see
+  `generate.ts`), never the live element.
+- Classic & Minimal render the name in **uppercase** — use case-insensitive text assertions in harnesses.
+- `npm audit` shows 2 moderate advisories = pre-existing **PostCSS-via-Next** transitives; do NOT
+  "fix" them (it downgrades Next). Unrelated to app deps.
+
+<!-- ============================================================= -->
+<!-- END PROJECT CONTEXT — generic SDD workflow rules follow        -->
+<!-- ============================================================= -->
 
 ## Task context
 
